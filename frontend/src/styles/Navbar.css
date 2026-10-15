@@ -1,0 +1,234 @@
+/* Main navbar */
+
+.navbar {
+  position: relative;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 5%;
+
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+/* Nexora logo */
+
+.navbar-logo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.navbar-logo img {
+  display: block;
+  width: 145px;
+  height: 48px;
+  object-fit: contain;
+}
+
+/* Main navigation links */
+
+.navbar-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+
+.navbar a {
+  color: #334155;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.navbar a:hover {
+  color: #2563eb;
+}
+
+/* Account and authentication areas */
+
+.navbar-account,
+.navbar-auth {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.navbar-account-button,
+.navbar-logout-button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.navbar-account-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.navbar-account-button:hover {
+  background: #f8fafc;
+}
+
+/* Sign in and register */
+
+.navbar-signin {
+  padding: 10px 4px;
+}
+
+.navbar .navbar-register {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.navbar .navbar-register:hover {
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+/* Account dropdown */
+
+.navbar-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 1000;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  min-width: 190px;
+  padding: 8px;
+  box-sizing: border-box;
+
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+}
+
+.navbar .navbar-menu a,
+.navbar .navbar-menu button {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 10px;
+
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+
+  color: #334155;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: left;
+  text-decoration: none;
+}
+
+.navbar .navbar-menu a:hover,
+.navbar .navbar-menu button:hover {
+  background: #f1f5f9;
+  color: #2563eb;
+}
+
+.navbar .navbar-menu .navbar-logout-button {
+  border-top: 1px solid #e2e8f0;
+  border-radius: 0 0 6px 6px;
+  color: #dc2626;
+}
+
+.navbar .navbar-menu .navbar-logout-button:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* Responsive layout */
+
+@media (max-width: 760px) {
+  .navbar {
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 12px 20px;
+  }
+
+  .navbar-logo img {
+    width: 115px;
+    height: 40px;
+  }
+
+  .navbar-links {
+    order: 3;
+    width: 100%;
+    justify-content: space-between;
+    gap: 14px;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .navbar-links a {
+    font-size: 13px;
+  }
+
+  .navbar-auth,
+  .navbar-account {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 380px) {
+  .navbar {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .navbar-logo img {
+    width: 95px;
+  }
+
+  .navbar-account-button {
+    padding: 9px;
+    font-size: 12px;
+  }
+
+  .navbar-auth {
+    gap: 8px;
+  }
+
+  .navbar .navbar-register {
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+
+  .navbar-links {
+    gap: 8px;
+  }
+
+  .navbar-links a {
+    font-size: 12px;
+  }
+}
+
