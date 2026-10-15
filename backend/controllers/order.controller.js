@@ -6,159 +6,166 @@ import stripe from "../config/stripe.js";
 import { createOrderFromCart } from "../services/order.service.js";
 import { validateShippingAddress } from "../utils/validateShippingAddress.js";
 
+// Minor unit representation: 5000 paise = ₹50.00
+const SHIPPING_COST_PAISE = 5000;
+
+/**
+ * 1. PLACE COD ORDER
+ */
 export const order = async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user?.id;
   const { shippingAddress, checkoutAttemptId } = req.body;
-  const shippingCost = 50;
-  const session = await mongoose.startSession();
+
+  if (!userId) {
+    return res.status(401).json({ message: "Authentication required." });
+  }
 
   const validationError = validateShippingAddress(shippingAddress);
-
   if (validationError) {
+    return res.status(400).json({ message: validationError });
+  }
+
+  if (
+    typeof checkoutAttemptId !== "string" ||
+    checkoutAttemptId.trim().length === 0
+  ) {
     return res.status(400).json({
-      message: validationError,
+      message: "A valid checkout attempt ID is required.",
     });
   }
 
-  if (!checkoutAttemptId) {
-    return res.status(400).json({
-      message: "Checkout attempt id is required",
-    });
-  }
+  let createdOrder;
 
   try {
-    session.startTransaction();
-
-    const order = await createOrderFromCart(
-      userId,
-      shippingAddress,
-      shippingCost,
-      "COD",
-      checkoutAttemptId,
-      session,
-    );
-
-    await session.commitTransaction();
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        createdOrder = await createOrderFromCart({
+          userId,
+          shippingAddress,
+          shippingCost: SHIPPING_COST_PAISE, // Standardized in minor units
+          paymentMethod: "COD",
+          checkoutAttemptId,
+          session,
+        });
+      });
+    } finally {
+      await session.endSession();
+    }
 
     return res.status(201).json({
+      success: true,
       message: "Order placed successfully",
-      order,
+      order: createdOrder,
     });
   } catch (err) {
-    await session.abortTransaction();
-
+    console.error("COD ORDER CREATION ERROR:", err);
     return res.status(500).json({
-      message: err.message,
+      message: err.message || "Failed to place order.",
     });
-  } finally {
-    await session.endSession();
   }
 };
 
+/**
+ * 2. GET USER ORDERS
+ */
 export const getOrder = async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user?.id;
 
   try {
     const orders = await Order.find({ userId }).sort({ createdAt: -1 });
 
-    if (orders.length === 0) {
-      return res.status(200).json({
-        success: true,
-        orders: [],
-        message: "You haven't placed any orders yet...",
-      });
-    }
     return res.status(200).json({
       success: true,
       orders,
+      message: orders.length === 0 ? "You haven't placed any orders yet." : undefined,
     });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    console.error("GET ORDERS ERROR:", err);
+    return res.status(500).json({ message: "Failed to retrieve orders." });
   }
 };
 
+/**
+ * 3. GET SINGLE ORDER (OWNERSHIP GUARDED)
+ */
 export const getSingleOrder = async (req, res) => {
   const { orderId } = req.params;
+  const userId = req.user?.id;
 
   try {
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ message: "Invalid order Id" });
+      return res.status(400).json({ message: "Invalid order ID." });
     }
 
-    const order = await Order.findById(orderId);
+    const order = await Order.findOne({
+      _id: orderId,
+      userId,
+    });
 
     if (!order) {
-      return res.status(404).json({
-        message: "Order not found",
-      });
+      return res.status(404).json({ message: "Order not found." });
     }
 
-    if (order.userId !== req.user.id) {
-      return res.status(403).json({
-        message: "Forbidden: You are not allowed to access this order",
-      });
-    }
     return res.status(200).json({
       success: true,
       order,
     });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    console.error("GET SINGLE ORDER ERROR:", err);
+    return res.status(500).json({ message: "Failed to retrieve order." });
   }
 };
 
+/**
+ * 4. ADMIN: GET ALL ORDERS
+ */
 export const getAllOrder = async (req, res) => {
-  console.log("GET ALL ADMIN ORDERS CONTROLLER");
-
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
-
-    if (orders.length === 0) {
-      return res.status(200).json({ orders });
-    }
     return res.status(200).json({
       success: true,
       orders,
     });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    console.error("GET ALL ORDERS ERROR:", err);
+    return res.status(500).json({ message: "Failed to retrieve orders." });
   }
 };
 
+/**
+ * 5. ADMIN: UPDATE ORDER STATUS
+ */
 export const updateOrderStatus = async (req, res) => {
+  const { orderId } = req.params;
+  const { orderStatus } = req.body;
+
+  const validStatuses = [
+    "pending",
+    "processing",
+    "shipped",
+    "delivered",
+    "cancelled",
+  ];
+
+  if (!validStatuses.includes(orderStatus)) {
+    return res.status(400).json({ message: "Invalid order status." });
+  }
+
+  const allowedTransitions = {
+    pending: ["processing", "cancelled"],
+    processing: ["shipped", "cancelled"],
+    shipped: ["delivered"],
+    delivered: [],
+    cancelled: [],
+  };
+
   try {
-    const { orderId } = req.params;
-    const { orderStatus } = req.body;
-
-    const validStatus = [
-      "pending",
-      "processing",
-      "shipped",
-      "delivered",
-      "cancelled",
-    ];
-
-    if (!validStatus.includes(orderStatus)) {
-      return res.status(400).json({
-        message: "Invalid order status",
-      });
-    }
-
     const order = await Order.findById(orderId);
 
     if (!order) {
-      return res.status(404).json({
-        message: "Order not found",
-      });
+      return res.status(404).json({ message: "Order not found." });
     }
-
-    const allowedTransitions = {
-      pending: ["processing", "cancelled"],
-      processing: ["shipped", "cancelled"],
-      shipped: ["delivered"],
-      delivered: [],
-      cancelled: [],
-    };
 
     if (order.orderStatus === orderStatus) {
       return res.status(200).json({
@@ -168,7 +175,7 @@ export const updateOrderStatus = async (req, res) => {
       });
     }
 
-    if (!allowedTransitions[order.orderStatus].includes(orderStatus)) {
+    if (!allowedTransitions[order.orderStatus]?.includes(orderStatus)) {
       return res.status(400).json({
         success: false,
         message: `Cannot change order status from '${order.orderStatus}' to '${orderStatus}'.`,
@@ -176,117 +183,88 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     order.orderStatus = orderStatus;
-
     await order.save();
 
     return res.status(200).json({
+      success: true,
       message: "Order status updated successfully",
       order,
     });
   } catch (err) {
-    return res.status(500).json({
-      message: err.message,
-    });
+    console.error("UPDATE ORDER STATUS ERROR:", err);
+    return res.status(500).json({ message: "Failed to update order status." });
   }
 };
 
-export const cancelOrder = async (req, res) => {
+/**
+ * 6. CANCEL ORDER (USER/ADMIN) WITH STRIPE REFUND & STOCK RESTORATION
+ */
+// controllers/order.controller.js
+
+export async function cancelOrder(req, res) {
   const { orderId } = req.params;
   const userId = req.user.id;
-  const cancellableStatus = ["pending", "processing"];
+
   const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    session.startTransaction();
-    const order = await Order.findById(orderId).session(session);
+    const order = await Order.findOne({ _id: orderId, userId }).session(session);
 
     if (!order) {
       await session.abortTransaction();
-      return res.status(404).json({ message: "order cannot found" });
+      return res.status(404).json({ message: "Order not found." });
     }
 
-    if (userId !== order.userId) {
-      await session.abortTransaction();
-      return res
-        .status(403)
-        .json({ message: "user doesn't have access to this order" });
-    }
-
-    if (!cancellableStatus.includes(order.orderStatus)) {
+    if (!["pending", "processing"].includes(order.orderStatus)) {
       await session.abortTransaction();
       return res.status(400).json({
-        message: `Order cannot be cancelled when status is '${order.orderStatus}'`,
+        message: `Cannot cancel order with status '${order.orderStatus}'.`,
       });
     }
 
-    const shouldRestoreStock = order.orderStatus === "processing";
-    const needsRefund =
-      order.paymentMethod === "Stripe" && order.paymentStatus === "paid";
-
-    if (shouldRestoreStock) {
+    // 1. Restore Inventory Stock
+    if (order.stockReserved) {
       for (const item of order.items) {
-        const product = await Product.findById(item.productId).session(session);
-
-        if (!product) {
-          await session.abortTransaction();
-          return res.status(404).json({
-            message: `Product not found: ${item.productId}`,
-          });
-        }
-
-        product.stock += item.quantity;
-
-        await product.save({ session });
+        await Product.updateOne(
+          { _id: item.productId },
+          { $inc: { stock: item.quantity } },
+          { session }
+        );
       }
+      order.stockReserved = false;
     }
 
-    if (needsRefund) {
-      const payment = await Payment.findOne({
+    // 2. Process Refund ONLY IF Payment was completed ("paid")
+    if (order.paymentMethod === "Stripe" && order.paymentStatus === "paid") {
+      const paymentRecord = await Payment.findOne({
         orderId: order._id,
         status: "paid",
       }).session(session);
 
-      if (!payment) {
-        await session.abortTransaction();
-
-        return res.status(404).json({
-          message: "Payment record not found for this order",
+      if (paymentRecord) {
+        await stripe.refunds.create({
+          payment_intent: paymentRecord.paymentIntentId,
         });
+        paymentRecord.status = "refunded";
+        await paymentRecord.save({ session });
+        order.paymentStatus = "refunded";
       }
-
-      await stripe.refunds.create(
-        {
-          payment_intent: payment.paymentIntentId,
-        },
-        {
-          idempotencyKey: `refund-${order._id}`,
-        },
-      );
-
-      order.paymentStatus = "refunded";
-      payment.status = "refunded";
-
-      await payment.save({ session });
+    } else if (order.paymentStatus === "pending") {
+      // Pending payments require no Stripe API refund call
+      order.paymentStatus = "failed";
     }
 
     order.orderStatus = "cancelled";
     await order.save({ session });
 
     await session.commitTransaction();
-    return res.status(200).json({
-      success: true,
-      message: "Order cancelled successfully",
-      order,
-    });
-  } catch (err) {
-    if (session.inTransaction()) {
-      await session.abortTransaction();
-    }
-
-    return res.status(500).json({
-      message: "something went wrong",
-      error: err.message,
-    });
+    return res.status(200).json({ message: "Order cancelled successfully.", order });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Cancel order error:", error);
+    return res.status(500).json({ message: "Failed to cancel order." });
   } finally {
-    await session.endSession();
+    session.endSession();
   }
-};
+}

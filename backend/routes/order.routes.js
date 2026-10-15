@@ -10,6 +10,7 @@ const router=express.Router();
 router.post('/',authMiddleware,order);
 router.get('/',authMiddleware,getOrder);
 router.get("/:orderId", authMiddleware, getSingleOrder);
-router.patch("/:orderId/cancel", authMiddleware, cancelOrder);
+
+router.put("/cancel/:orderId", authMiddleware, cancelOrder);
 
 export default router;

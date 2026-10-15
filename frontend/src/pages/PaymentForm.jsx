@@ -1,100 +1,79 @@
-import { useState } from "react";
 import {
-  PaymentElement,
   useStripe,
   useElements,
+  PaymentElement,
 } from "@stripe/react-stripe-js";
-import { useNavigate } from "react-router-dom";
-import { useCart } from "../context/CartContext";
-import api from "../services/api.js";
+import { useState } from "react";
 
 function PaymentForm({ orderId }) {
   const stripe = useStripe();
   const elements = useElements();
 
-  const navigate = useNavigate();
-  const { fetchCart } = useCart();
-
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function waitForPaymentConfirmation() {
-    const maxAttempts = 10;
-
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const res = await api.get(`/order/${orderId}`);
-
-      const status = res.data.order.paymentStatus;
-
-      if (status === "paid") {
-        return true;
-      }
-
-      if (status === "failed" || status === "refunded") {
-        return false;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-
-    return false;
-  }
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!stripe || !elements) {
+    if (!stripe || !elements || isProcessing) {
       return;
     }
 
-    setLoading(true);
-    setMessage("");
+    setIsProcessing(true);
+    setErrorMessage("");
 
-    const { error, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      redirect: "if_required",
-    });
+    try {
+      const { error: submitError } = await elements.submit();
 
-    if (error) {
-      setMessage(error.message);
-      setLoading(false);
-      return;
-    }
-
-    if (paymentIntent?.status === "succeeded") {
-      try {
-        const confirmed = await waitForPaymentConfirmation();
-
-        if (confirmed) {
-          await fetchCart();
-          navigate("/order-success");
-          return;
-        }
-
-        setMessage(
-          "Payment succeeded, but order confirmation is still pending. Please check your order history.",
-        );
-      } catch (err) {
-        setMessage(
-          "Payment succeeded, but we couldn't verify the order. Please check your order history.",
-        );
+      if (submitError) {
+        setErrorMessage(submitError.message);
+        setIsProcessing(false);
+        return;
       }
-    }
 
-    setLoading(false);
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/order-success?orderId=${encodeURIComponent(
+            orderId
+          )}`,
+        },
+      });
+
+      if (error) {
+        setErrorMessage(
+          error.message || "Payment could not be completed."
+        );
+        setIsProcessing(false);
+      }
+    } catch (err) {
+      console.error("Payment confirmation failed:", err);
+      setErrorMessage("Unable to confirm payment. Please try again.");
+      setIsProcessing(false);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Payment Form</h2>
+    <form onSubmit={handleSubmit} className="payment-form">
+      <PaymentElement
+        options={{
+          layout: "tabs",
+        }}
+      />
 
-      <PaymentElement />
+      {errorMessage && (
+        <p role="alert" className="payment-error">
+          {errorMessage}
+        </p>
+      )}
 
-      <button type="submit" disabled={!stripe || loading}>
-        {loading ? "Processing..." : "Pay"}
+      <button
+        type="submit"
+        disabled={!stripe || !elements || isProcessing}
+        className="pay-button"
+      >
+        {isProcessing ? "Processing..." : "Pay Now"}
       </button>
-
-      {message && <p>{message}</p>}
     </form>
   );
 }

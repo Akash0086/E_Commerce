@@ -1,38 +1,51 @@
 import mongoose from "mongoose";
 
-export const paymentSchema = new mongoose.Schema(
+const paymentSchema = new mongoose.Schema(
   {
     orderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Order",
       required: true,
-    },
-    amount: {
-      type: Number,
-      required: true,
-    },
-    gateway: {
-      type: String,
-      enum: ["Stripe", "Razorpay"],
-      default: "Stripe",
+      index: true,
     },
     paymentIntentId: {
       type: String,
       required: true,
+      unique: true, // Prevents duplicate payment records for the same Stripe Intent
+    },
+    amount: {
+      type: Number,
+      required: true,
+      min: [0, "Amount must be non-negative"],
+      validate: {
+        validator: Number.isInteger,
+        message: "Amount must be an integer in minor units (e.g. cents/paise)",
+      },
+    },
+    currency: {
+      type: String,
+      required: true,
+      lowercase: true,
+      default: "inr",
     },
     status: {
       type: String,
-      enum: ["pending", "paid", "failed","refunded"],
-      default: "pending",
+      enum: ["paid", "refunded", "failed", "requires_action"],
+      required: true,
     },
-    method: {
+    gateway: {
       type: String,
-      enum: ["UPI", "Card", "NetBanking", "Wallet", "COD"],
+      enum: ["Stripe", "COD"],
+      required: true,
+    },
+    rawMetadata: {
+      type: Object,
+      default: {},
     },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 export const Payment = mongoose.model("Payment", paymentSchema);

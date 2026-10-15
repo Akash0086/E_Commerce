@@ -1,12 +1,12 @@
-import {db} from "../../config/mysql.js";
+import { db } from "../../config/mysql.js";
 
 export const User = {
-  create: async(userdata)=>{
-    const sql=` insert into users(name,email,password,role)
+  create: async (userdata) => {
+    const sql = ` insert into users(name,email,password,role)
     values(?,?,?,?)
     `;
-    
-    const [result]=await db.execute(sql,[
+
+    const [result] = await db.execute(sql, [
       userdata.name,
       userdata.email,
       userdata.password,
@@ -34,7 +34,17 @@ export const User = {
     const [rows] = await db.execute(sql, [id]);
 
     return rows[0];
+  },
+  update: async (id, { name, phone }) => {
+    const sql = `
+      UPDATE users
+      SET name = ?, phone = ?
+      WHERE id = ?
+    `;
 
+    await db.execute(sql, [name, phone || null, id]);
+
+    // Fetch and return the updated user record
+    return await User.findById(id);
   },
 };
-
