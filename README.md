@@ -1,15 +1,14 @@
-# 🛍️ Nexora — Enterprise Dual-Database E-Commerce Platform
+# 🛍️ Nexora — Enterprise E-Commerce Platform
 
 [![Node.js](https://img.shields.io/badge/Node.js-v22.x-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express.js](https://img.shields.io/badge/Express.js-v5.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![React](https://img.shields.io/badge/React-v19.x-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-v8.x-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![Vite](https://img.shields.io/badge/Vite-v8.x-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)\
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas%20%2F%20v7+-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![Stripe](https://img.shields.io/badge/Stripe-Payment%20Intents-008CDD?logo=stripe&logoColor=white)](https://stripe.com/)
 [![License](https://img.shields.io/badge/License-ISC-blue.svg)](LICENSE)
 
-Nexora is a full-stack, enterprise-grade e-commerce application architected around **Polyglot Persistence**, separating relational identity and access management (**MySQL**) from high-velocity document storage (**MongoDB**). Designed for real-world resilience, Nexora features **ACID-compliant distributed order placement**, **atomic inventory reservation**, **Stripe Payment Intent integrations with idempotency deduplication**, and a modern, responsive **React 19 SPA**.
+Nexora is a full-stack, enterprise-grade e-commerce application built on a **unified MongoDB** data layer, managing all application entities — users, products, carts, orders, payments, and wishlists — within a single, scalable document store. Designed for real-world resilience, Nexora features **ACID-compliant distributed order placement**, **atomic inventory reservation**, **Stripe Payment Intent integrations with idempotency deduplication**, and a modern, responsive **React 19 SPA**.
 
 ---
 
@@ -42,12 +41,10 @@ Nexora is a full-stack, enterprise-grade e-commerce application architected arou
 
 ## 🌟 Project Overview
 
-Modern e-commerce platforms struggle with a fundamental database tradeoff: user accounts and relational entitlements demand strict SQL transactional invariants, while catalogs, shopping baskets, and unstructured order logs demand document flexibility and horizontal scaling.
+Modern e-commerce platforms require a database that balances flexible schema design with strong transactional guarantees. Nexora solves this by consolidating all application data into a **single MongoDB** instance:
 
-Nexora solves this by applying a **hybrid polyglot persistence architecture**:
-1. **Relational Core (MySQL)**: Manages authentication, identity records, bcrypt password digests, and customer profiles.
-2. **Document Store (MongoDB)**: Manages high-throughput product catalogs, transient shopping carts, immutable order snapshots, Stripe payment event logs, and user wishlists.
-3. **Resilient Transaction Engine**: Guarantees zero stock overselling by leveraging MongoDB multi-document transactions with conditional atomic decrement queries (`stock >= quantity`), coupled with a cryptographically enforced Stripe webhook idempotency engine.
+1. **Unified Document Store (MongoDB)**: Manages user identities, authentication credentials, product catalogs, transient shopping carts, immutable order snapshots, Stripe payment event logs, and user wishlists.
+2. **Resilient Transaction Engine**: Guarantees zero stock overselling by leveraging MongoDB multi-document transactions with conditional atomic decrement queries (`stock >= quantity`), coupled with a cryptographically enforced Stripe webhook idempotency engine.
 
 ---
 
@@ -94,7 +91,6 @@ Nexora solves this by applying a **hybrid polyglot persistence architecture**:
 | [Node.js](https://nodejs.org/) | `22.x` | Modern JavaScript runtime (ES Modules native) |
 | [Express.js](https://expressjs.com/) | `5.2.1` | Next-generation minimalist web framework |
 | [Mongoose](https://mongoosejs.com/) | `9.9.3` | Object Data Modeling (ODM) for MongoDB |
-| [mysql2](https://github.com/sidorares/node-mysql2) | `3.23.3` | High-performance MySQL driver with Promise connection pooling |
 | [Stripe SDK](https://github.com/stripe/stripe-node) | `22.3.0` | Server-side Stripe API client |
 | [JSON Web Token (JWT)](https://jwt.io/) | `9.0.3` | Cryptographic session tokens |
 | [Bcrypt](https://github.com/kelektiv/node.bcrypt.js) | `6.0.0` | Salted password hashing (cost factor 10) |
@@ -105,9 +101,8 @@ Nexora solves this by applying a **hybrid polyglot persistence architecture**:
 ### Infrastructure & Databases
 | Technology | Role |
 | :--- | :--- |
-| **MySQL 8.0** | Relational user identities, credentials, and authentication profiles |
-| **MongoDB 7.0+** | Catalogs, orders, carts, wishlists, and webhook idempotency events |
-| **Docker & Docker Compose** | Containerized local environment orchestrating Node.js, MySQL, and MongoDB |
+| **MongoDB 7.0+** | Unified store for users, catalogs, orders, carts, wishlists, and webhook idempotency events |
+| **Docker & Docker Compose** | Containerized local environment orchestrating Node.js and MongoDB |
 
 ---
 
@@ -137,9 +132,9 @@ graph TB
         WishCtrl["Wishlist Controller"]
     end
 
-    subgraph DataTier ["Polyglot Persistence Layer"]
-        MySQL[("MySQL 8.0<br/>Users Table")]
-        MongoDB[("MongoDB 7.0+<br/>Products, Carts, Orders,<br/>Payments, ProcessedEvents")]
+    subgraph DataTier ["MongoDB Persistence Layer"]
+        UserCol[("MongoDB: Users Collection<br/>(Credentials, Roles, Profiles)")]
+        CommerceCol[("MongoDB: Commerce Collections<br/>(Products, Carts, Orders,<br/>Payments, Wishlists, Events)")]
     end
 
     subgraph External ["External Third-Party APIs"]
@@ -160,12 +155,12 @@ graph TB
     AdminMid --> ProdCtrl
     AdminMid --> OrderSvc
 
-    UserCtrl -->|"SQL queries (Pool)"| MySQL
-    ProdCtrl -->|"Mongoose ODM"| MongoDB
-    CartCtrl -->|"Mongoose ODM"| MongoDB
-    OrderSvc -->|"MongoDB Sessions / Transactions"| MongoDB
-    WishCtrl -->|"Mongoose ODM"| MongoDB
-    PayCtrl -->|"Mongoose ODM"| MongoDB
+    UserCtrl -->|"Mongoose ODM"| UserCol
+    ProdCtrl -->|"Mongoose ODM"| CommerceCol
+    CartCtrl -->|"Mongoose ODM"| CommerceCol
+    OrderSvc -->|"MongoDB Sessions / Transactions"| CommerceCol
+    WishCtrl -->|"Mongoose ODM"| CommerceCol
+    PayCtrl -->|"Mongoose ODM"| CommerceCol
 
     PayCtrl <-->|"Create Intent / Refunds"| StripeAPI
     StripeAPI -->|"Async Webhooks"| PayCtrl
@@ -182,18 +177,18 @@ sequenceDiagram
     autonumber
     actor Customer as User / Browser
     participant API as Express API
-    participant MySQL as MySQL Database
+    participant Mongo as MongoDB
 
     Customer->>API: POST /users/register { name, email, password }
-    API->>MySQL: SELECT * FROM users WHERE email = ?
-    MySQL-->>API: null (User not found)
+    API->>Mongo: User.findOne({ email })
+    Mongo-->>API: null (User not found)
     API->>API: bcrypt.hash(password, 10)
-    API->>MySQL: INSERT INTO users(name, email, password, role) VALUES(...)
+    API->>Mongo: User.create({ name, email, password, role })
     API-->>Customer: 201 Created
 
     Customer->>API: POST /users/login { email, password }
-    API->>MySQL: SELECT * FROM users WHERE email = ?
-    MySQL-->>API: User Record
+    API->>Mongo: User.findOne({ email }).select("+password")
+    Mongo-->>API: User Document
     API->>API: bcrypt.compare(password, hash)
     API->>API: jwt.sign({ id, email, role }, JWT_SECRET)
     API-->>Customer: 200 OK + Set-Cookie: token (HttpOnly, SameSite=Lax)
@@ -280,7 +275,6 @@ E_commerce_app/
 │   │
 │   ├── config/                     # Database & integration clients
 │   │   ├── mongo.js                # Mongoose connection manager
-│   │   ├── mysql.js                # MySQL2 promise connection pool
 │   │   └── stripe.js               # Stripe API client instance
 │   │
 │   ├── controllers/                # Request validation and business orchestration
@@ -295,16 +289,15 @@ E_commerce_app/
 │   │   ├── auth.middleware.js      # Cookie JWT verification & req.user injection
 │   │   └── admin.middleware.js     # Role-based access enforcement (role === 'admin')
 │   │
-│   ├── models/                     # Polyglot Data Schema Layer
-│   │   ├── mongo/                  # MongoDB Mongoose Schemas
-│   │   │   ├── cart.mongo.js       # User Cart model
-│   │   │   ├── order.model.js      # Order model with compound unique indexes
-│   │   │   ├── payment.model.js    # Payment transaction ledger
-│   │   │   ├── processedEvent.model.js # Webhook idempotency event store
-│   │   │   ├── product.model.js    # Product catalog schema
-│   │   │   └── wishlist.model.js   # User wishlist schema
-│   │   └── mysql/                  # MySQL Data Access Objects
-│   │       └── user.model.js       # Raw parameterized SQL user model
+│   ├── models/                     # MongoDB Mongoose Schema Layer
+│   │   └── mongo/                  # Mongoose Schemas
+│   │       ├── user.model.js       # User identity, credentials & roles
+│   │       ├── cart.mongo.js       # User Cart model
+│   │       ├── order.model.js      # Order model with compound unique indexes
+│   │       ├── payment.model.js    # Payment transaction ledger
+│   │       ├── processedEvent.model.js # Webhook idempotency event store
+│   │       ├── product.model.js    # Product catalog schema
+│   │       └── wishlist.model.js   # User wishlist schema
 │   │
 │   ├── routes/                     # Express Router definitions
 │   │   ├── admin.routes.js         # Protected administrative order routes
@@ -380,25 +373,26 @@ E_commerce_app/
 
 ## 🗄️ Database Architecture
 
-Nexora's hybrid schema links relational users with document-based entities via the numeric `userId`:
+Nexora's unified MongoDB schema stores all entities in a single database. User ObjectIds act as the foreign key linking users to their carts, orders, and wishlists:
 
 ```mermaid
 erDiagram
-    MYSQL_USERS ||--o{ MONGO_CARTS : "owns"
-    MYSQL_USERS ||--o{ MONGO_ORDERS : "places"
-    MYSQL_USERS ||--o{ MONGO_WISHLISTS : "saves"
+    MONGO_USERS ||--o{ MONGO_CARTS : "owns"
+    MONGO_USERS ||--o{ MONGO_ORDERS : "places"
+    MONGO_USERS ||--o{ MONGO_WISHLISTS : "saves"
     MONGO_ORDERS ||--o{ MONGO_PAYMENTS : "reconciled_by"
     MONGO_PRODUCTS ||--o{ MONGO_CARTS : "referenced_in"
     MONGO_PRODUCTS ||--o{ MONGO_ORDERS : "snapshotted_in"
 
-    MYSQL_USERS {
-        int id PK "AUTO_INCREMENT"
+    MONGO_USERS {
+        ObjectId _id PK
         string name
         string email UK
-        string password "bcrypt hash"
+        string password "bcrypt hash (select: false)"
         string role "user | admin"
-        string phone "nullable"
-        timestamp created_at
+        string phone "optional"
+        timestamp createdAt
+        timestamp updatedAt
     }
 
     MONGO_PRODUCTS {
@@ -413,14 +407,14 @@ erDiagram
 
     MONGO_CARTS {
         ObjectId _id PK
-        int userId "References MySQL User ID"
+        ObjectId userId "References MONGO_USERS"
         Array items "Array of { productId, quantity }"
         timestamp updatedAt
     }
 
     MONGO_ORDERS {
         ObjectId _id PK
-        int userId "Indexed"
+        ObjectId userId "Indexed"
         string checkoutAttemptId "Compound Unique Key"
         string paymentIntentId "Sparse Unique Index"
         int totalAmount "Minor units"
@@ -454,7 +448,7 @@ erDiagram
 
     MONGO_WISHLISTS {
         ObjectId _id PK
-        int userId UK "References MySQL User ID"
+        ObjectId userId UK "References MONGO_USERS"
         Array items "Array of { productId }"
     }
 ```
@@ -466,7 +460,6 @@ erDiagram
 ### Prerequisites
 - **Node.js**: `v20.x` or `v22.x LTS`
 - **npm**: `v10.x+`
-- **MySQL Server**: `v8.0+` running locally or via Docker
 - **MongoDB**: `v6.0+` or `v7.0+` replica set (transactions require replica sets)
 - **Stripe Account**: API test keys (`pk_test_...` and `sk_test_...`)
 
@@ -492,23 +485,6 @@ erDiagram
    npm install
    ```
 
-4. **Initialize MySQL Schema**:
-   Connect to your MySQL instance and run:
-   ```sql
-   CREATE DATABASE IF NOT EXISTS e_commerce;
-   USE e_commerce;
-
-   CREATE TABLE IF NOT EXISTS users (
-     id INT AUTO_INCREMENT PRIMARY KEY,
-     name VARCHAR(255) NOT NULL,
-     email VARCHAR(255) NOT NULL UNIQUE,
-     password VARCHAR(255) NOT NULL,
-     role ENUM('user', 'admin') DEFAULT 'user',
-     phone VARCHAR(20) DEFAULT NULL,
-     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-   );
-   ```
-
 ---
 
 ### Environment Variables
@@ -521,12 +497,6 @@ Create a `.env` file in the `backend/` directory:
 PORT=3000
 NODE_ENV=development
 
-# MySQL Database
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=e_commerce
-
 # MongoDB Database (Must support Replica Sets for Transactions)
 MONGO_URI=mongodb://localhost:27017/e_commerce?replicaSet=rs0
 
@@ -534,8 +504,8 @@ MONGO_URI=mongodb://localhost:27017/e_commerce?replicaSet=rs0
 JWT_SECRET=your_super_secret_jwt_key_change_in_production
 
 # Stripe Payments
-STRIPE_SECRET_KEY=sk_test_yourStripeSecretKeyHere
-STRIPE_WEBHOOK_SECRET=whsec_yourStripeWebhookSigningSecretHere
+STRIPE_SECRET_KEY=sk_test_REPLACE_WITH_YOUR_KEY
+STRIPE_WEBHOOK_SECRET=whsec_REPLACE_WITH_YOUR_KEY
 ```
 
 #### Frontend Configuration (`frontend/.env`)
@@ -543,7 +513,7 @@ Create a `.env` file in the `frontend/` directory:
 
 ```env
 # Stripe Client Publishable Key
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_yourStripePublishableKeyHere
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_REPLACE_WITH_YOUR_KEY
 ```
 
 ---
@@ -580,7 +550,7 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_test_yourStripePublishableKeyHere
 The project includes container specifications via `compose.yml`:
 
 ```bash
-docker compose up -d mongodb mysql
+docker compose up -d mongodb
 ```
 
 *Note: For detailed Docker production instructions, multi-stage containerization, and networking setup, refer to [DEPLOYMENT.md](DEPLOYMENT.md).*
@@ -627,8 +597,8 @@ docker compose up -d mongodb mysql
 
 1. **HttpOnly Cookie Authentication**:
    JWT tokens are stored inside `httpOnly`, `sameSite: "lax"` cookies, protecting tokens from malicious client-side script exfiltration (`document.cookie` is blind to the token).
-2. **SQL Injection Defense**:
-   All database access to MySQL uses prepared statements via `mysql2` parameterized placeholders (`?`), completely neutralizing SQL injection vectors.
+2. **NoSQL Injection Defense**:
+   All database queries use Mongoose's typed schema layer and parameterized query builders, completely neutralizing NoSQL injection vectors.
 3. **Webhook Signature Cryptography**:
    Stripe webhooks are intercepted as raw byte buffers (`express.raw({ type: "application/json" })`) before JSON parsing, allowing `stripe.webhooks.constructEvent()` to cryptographically verify HMAC signatures.
 4. **Idempotent Webhook Consumer**:
@@ -642,8 +612,8 @@ docker compose up -d mongodb mysql
 
 - **Compound Indexing**:
   MongoDB order queries leverage compound indexes `{ userId: 1, checkoutAttemptId: 1 }` and sparse unique indexes `{ paymentIntentId: 1 }` for near-instant $O(1)$ lookups.
-- **MySQL Connection Pooling**:
-  Database connections are reused via `mysql.createPool({ connectionLimit: 10 })`, preventing connection thrashing under high request loads.
+- **MongoDB Connection Pooling**:
+  Mongoose manages a built-in connection pool via `mongoose.connect()`, reusing connections across requests and preventing connection thrashing under high load.
 - **Lazy Image Loading**:
   Product thumbnails and gallery views utilize native browser `loading="lazy"` attributes, minimizing initial page load weight.
 - **Client-Side Debouncing & Memoization**:
