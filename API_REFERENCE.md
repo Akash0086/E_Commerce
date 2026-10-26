@@ -116,7 +116,7 @@ List endpoints return a standardized pagination object:
 ## 2. Authentication & User Profile Endpoints
 
 ### POST /users/register
-Registers a new customer account in the MySQL database with a bcrypt-hashed password.
+Registers a new customer account in MongoDB with a bcrypt-hashed password.
 
 - **Access**: Public
 - **Request Body**:
@@ -164,7 +164,7 @@ Authenticates credentials, issues a signed JWT, and attaches it as an HTTP-Only 
     {
       "message": "Login successful",
       "user": {
-        "id": 12,
+        "id": "6711abcdef1234567890abcd",
         "name": "Jane Doe",
         "email": "jane@example.com",
         "role": "user"
@@ -199,7 +199,7 @@ Clears the session cookie on the client.
 ---
 
 ### GET /users/profile
-Retrieves profile information for the authenticated user from the MySQL database.
+Retrieves profile information for the authenticated user from MongoDB.
 
 - **Access**: Authenticated
 - **Responses**:
@@ -207,7 +207,7 @@ Retrieves profile information for the authenticated user from the MySQL database
     ```json
     {
       "user": {
-        "id": 12,
+        "id": "6711abcdef1234567890abcd",
         "name": "Jane Doe",
         "email": "jane@example.com",
         "role": "user"
@@ -238,7 +238,7 @@ Updates the profile information (name and phone number) for the authenticated us
     {
       "message": "Profile updated successfully",
       "user": {
-        "id": 12,
+        "id": "6711abcdef1234567890abcd",
         "name": "Jane Doe Smith",
         "email": "jane@example.com",
         "role": "user"
@@ -410,7 +410,7 @@ Retrieves the authenticated user's active shopping cart with populated product d
     {
       "cartDetails": {
         "_id": "6711aaaa1111bb2222cc3333",
-        "userId": 12,
+        "userId": "6711abcdef1234567890abcd",
         "items": [
           {
             "_id": "6711bbbb1111bb2222cc3333",
@@ -508,7 +508,7 @@ Places an order with Cash on Delivery (COD) payment method. Executes within an A
       "message": "Order placed successfully",
       "order": {
         "_id": "671234567890abcdef123456",
-        "userId": 12,
+        "userId": "6711abcdef1234567890abcd",
         "totalAmount": 34998,
         "shippingAmount": 5000,
         "paymentMethod": "COD",

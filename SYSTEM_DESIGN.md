@@ -17,9 +17,9 @@
   - [3.2 The ProcessedEvent Deduplication Engine](#32-the-processedevent-deduplication-engine)
   - [3.3 Edge Case: Early Webhook vs. In-Flight Client Handshake](#33-edge-case-early-webhook-vs-in-flight-client-handshake)
   - [3.4 Financial Reconciliation & Tamper Detection](#34-financial-reconciliation--tamper-detection)
-- [4. Polyglot Persistence & Data Consistency Models](#4-polyglot-persistence--data-consistency-models)
+- [4. MongoDB Data Consistency Model](#4-mongodb-data-consistency-model)
   - [4.1 CAP Theorem Positioning](#41-cap-theorem-positioning)
-  - [4.2 The Dual-Write Problem & Boundary Decoupling](#42-the-dual-write-problem--boundary-decoupling)
+  - [4.2 Intra-MongoDB Session Boundaries](#42-intra-mongodb-session-boundaries)
 - [5. End-to-End Idempotency Architecture](#5-end-to-end-idempotency-architecture)
   - [5.1 The `checkoutAttemptId` Invariant](#51-the-checkoutattemptid-invariant)
   - [5.2 Stripe Idempotency Key Propagation](#52-stripe-idempotency-key-propagation)
@@ -40,9 +40,9 @@
 E-commerce architectures face demanding correctness constraints:
 1. **Financial Precision**: Under no circumstance may a customer be charged without a corresponding order, nor charged twice for the same intent.
 2. **Inventory Integrity**: Stock counts must never dip below zero under high concurrent loads.
-3. **High Availability vs. Consistency**: User registration and profile management prioritize ACID relational guarantees, while product browsing demands high read throughput and horizontal scaling.
+3. **High Availability vs. Consistency**: User authentication and order transactions require strict ACID guarantees with WiredTiger majority write concerns, while product browsing demands high read throughput.
 
-Nexora addresses these challenges through a **hybrid relational/document system** incorporating **client-originated idempotency tokens**, **database transaction sessions**, and **cryptographic webhook validation**.
+Nexora addresses these challenges through a **unified MongoDB document system** incorporating **client-originated idempotency tokens**, **multi-document ACID transaction sessions**, and **cryptographic webhook validation**.
 
 ---
 
@@ -229,7 +229,7 @@ if (!amountMatches || !currencyMatches || !metadataMatches) {
 
 ---
 
-## 4. Polyglot Persistence & Data Consistency Models
+## 4. MongoDB Data Consistency Model
 
 ### 4.1 CAP Theorem Positioning
 
@@ -240,29 +240,28 @@ graph TD
         AP["Availability + Partition Tolerance (AP)"]
     end
 
-    subgraph NexoraData ["Nexora Data Partitioning"]
-        MySQLStore["MySQL (User Auth & Roles)<br/>Strict ACID, Read/Write to Primary"]
+    subgraph NexoraData ["Nexora Data Consistency"]
+        MongoUsers["MongoDB (User Auth & Roles)<br/>Mongoose Schema, Unique Email Index"]
         MongoOrders["MongoDB Replica Set (Orders & Inventory)<br/>WiredTiger Engine, Majority Write Concern"]
     end
 
-    CP --> MySQLStore
+    CP --> MongoUsers
     CP --> MongoOrders
 ```
 
-Nexora operates primarily as a **CP (Consistent and Partition Tolerant)** system for critical transactions:
+Nexora operates as a **CP (Consistent and Partition Tolerant)** system for all critical operations:
 - **Zero Overselling**: Sacrifices write availability during database partition rather than allowing negative inventory or double payments.
 - **WiredTiger Majority Commits**: MongoDB multi-document transactions ensure data is written to a quorum of replica set nodes before acknowledging completion.
+- **Unified Consistency Boundary**: Because all data lives in one MongoDB instance, all ACID transactions — including user registration, order placement, and payment reconciliation — operate within the same consistency model without cross-engine coordination.
 
 ---
 
-### 4.2 The Dual-Write Problem & Boundary Decoupling
+### 4.2 Intra-MongoDB Session Boundaries
 
-A frequent architectural anti-pattern in polyglot systems is attempting a distributed two-phase commit (2PC) across heterogeneous databases (MySQL + MongoDB).
-
-#### How Nexora Avoids Distributed 2PC:
-Nexora **never modifies both MySQL and MongoDB in the same request transaction**. The domain boundaries are strictly orthogonal:
-- **Registration / Login / Profile Updates**: Exclusively reads/writes to **MySQL**.
-- **Cart / Product / Order / Payment**: Exclusively reads/writes to **MongoDB**, treating MySQL `userId` strictly as an uninterpreted numeric external key.
+Since the entire application operates within a single MongoDB database, Nexora achieves full transactional consistency without distributed coordination protocols:
+- **User Registration / Login / Profile Updates**: Read/write to the `users` collection via Mongoose.
+- **Cart / Product / Order / Payment**: Read/write to their respective collections, with multi-document ACID sessions spanning `orders`, `carts`, and `products` atomically within a single MongoDB session.
+- **No Two-Phase Commit Required**: All mutations within a checkout flow or cancellation flow are wrapped in a single `session.withTransaction()` call, providing all-or-nothing guarantees natively.
 
 ---
 
@@ -440,9 +439,8 @@ graph TB
         RedisCluster[("Redis Cluster<br/>- Catalog Cache<br/>- Distributed Locks<br/>- Rate Limiting")]
     end
 
-    subgraph DataCluster ["Polyglot Storage Cluster"]
-        MySQLCluster[("MySQL 8.0 Primary / Read-Replica<br/>User Identities")]
-        MongoCluster[("MongoDB Atlas Sharded Cluster<br/>Catalogs, Orders, Carts")]
+    subgraph DataCluster ["MongoDB Storage Cluster"]
+        MongoCluster[("MongoDB Atlas Sharded Cluster<br/>Users, Catalogs, Orders, Carts, Payments")]
     end
 
     subgraph SearchEngine ["Dedicated Search Engine"]
@@ -455,7 +453,6 @@ graph TB
     NginxLB --> NodeN
 
     Node1 & Node2 & NodeN <--> RedisCluster
-    Node1 & Node2 & NodeN --> MySQLCluster
     Node1 & Node2 & NodeN --> MongoCluster
     Node1 & Node2 & NodeN <--> Meilisearch
 ```

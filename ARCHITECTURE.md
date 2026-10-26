@@ -21,9 +21,9 @@ This document provides an exhaustive, principal-level architectural specificatio
 - [5. Authentication & RBAC Architecture](#5-authentication--rbac-architecture)
   - [5.1 Cookie-Based Stateless JWT Mechanics](#51-cookie-based-stateless-jwt-mechanics)
   - [5.2 Dual-Tier Role Authorization (Customer vs. Admin)](#52-dual-tier-role-authorization-customer-vs-admin)
-- [6. Polyglot Persistence Architecture](#6-polyglot-persistence-architecture)
-  - [6.1 Relational vs. Document Database Rationale](#61-relational-vs-document-database-rationale)
-  - [6.2 Cross-Database Identity Mapping](#62-cross-database-identity-mapping)
+- [6. MongoDB Data Architecture](#6-mongodb-data-architecture)
+  - [6.1 Unified MongoDB Data Model](#61-unified-mongodb-data-model)
+  - [6.2 Intra-Collection Identity Mapping](#62-intra-collection-identity-mapping)
 - [7. Distributed State Machines & Lifecycles](#7-distributed-state-machines--lifecycles)
   - [7.1 Order Lifecycle State Machine](#71-order-lifecycle-state-machine)
   - [7.2 Payment Lifecycle State Machine](#72-payment-lifecycle-state-machine)
@@ -36,9 +36,8 @@ This document provides an exhaustive, principal-level architectural specificatio
 
 Nexora is designed to reflect an enterprise production architecture where different data domains exhibit fundamentally different scalability and consistency requirements:
 
-1. **Polyglot Persistence by Domain Boundaries**:
-   - **Identity & Accounts (MySQL)**: Requires strict relational schema consistency, relational integrity, foreign key readiness for future enterprise accounting, and fast primary-key lookups.
-   - **Catalogs, Carts, & Orders (MongoDB)**: Requires document flexibility (polymorphic product attributes), fast nested sub-document queries (order items snapshotting), high-throughput JSON storage, and horizontal replica set scaling.
+1. **Unified MongoDB Persistence**:
+   A single MongoDB instance manages all application domains — user identities, product catalogs, shopping carts, orders, payments, and wishlists. This eliminates cross-database distributed transactions and simplifies the operational footprint.
 2. **ACID Transactions on Document Workflows**:
    - Despite using a NoSQL primary store for commerce entities, all critical mutative workflows (Order creation, stock deduction, and cart cleanup) are bundled inside MongoDB multi-document ACID transactions using Sessions.
 3. **Idempotency as a First-Class Citizen**:
@@ -83,9 +82,8 @@ graph TB
         API["Express.js 5 API Server<br/>Node.js 22 (Port 3000)"]
     end
 
-    subgraph PersistenceTier ["Polyglot Data Layer"]
-        MySQLDb[("MySQL 8.0 Server<br/>Users, Credentials, Profiles")]
-        MongoDb[("MongoDB 7.0+ Replica Set<br/>Products, Carts, Orders,<br/>Payments, ProcessedEvents")]
+    subgraph PersistenceTier ["MongoDB Data Layer"]
+        MongoDb[("MongoDB 7.0+ Replica Set<br/>Users, Products, Carts, Orders,<br/>Payments, Wishlists, ProcessedEvents")]
     end
 
     subgraph ExternalServices ["External Systems"]
@@ -93,7 +91,6 @@ graph TB
     end
 
     SPA -->|"HTTPS / REST API<br/>withCredentials: true"| API
-    API -->|"mysql2 Promise Pool<br/>(Port 3306)"| MySQLDb
     API -->|"Mongoose ODM / Transactions<br/>(Port 27017)"| MongoDb
     API -->|"HTTPS (Stripe SDK)"| StripeCloud
     StripeCloud -->|"HTTPS Webhook POST<br/>/payments/webhook"| API
@@ -128,7 +125,7 @@ graph TB
     end
 
     subgraph DataAccessLayer ["Models & Storage Tier"]
-        UserModel["User (MySQL DAO)"]
+        UserModel["User (Mongo)"]
         ProductModel["Product (Mongo)"]
         CartModel["Cart (Mongo)"]
         OrderModel["Order (Mongo)"]
@@ -316,8 +313,8 @@ Nexora utilizes a **Layered Architecture (N-Tier)** pattern:
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                 DATA ACCESS TIER (MODELS)                   │
-│  - Mongoose ODM Models for MongoDB Document Collections     │
-│  - Parameterized DAO Object for MySQL Users Table           │
+│  - Mongoose ODM Models for all MongoDB Document Collections │
+│  - User, Product, Cart, Order, Payment, Wishlist schemas    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -370,41 +367,43 @@ flowchart TD
 
 ---
 
-## 6. Polyglot Persistence Architecture
+## 6. MongoDB Data Architecture
 
-### 6.1 Relational vs. Document Database Rationale
+### 6.1 Unified MongoDB Data Model
 
-| Dimension | MySQL 8.0 (Relational Store) | MongoDB 7.0+ (Document Store) |
+All application entities live inside a single MongoDB database. Each domain is a separate collection with a Mongoose schema:
+
+| Collection | Mongoose Model | Responsibility |
 | :--- | :--- | :--- |
-| **Domain** | User Accounts, Credentials, Profiles | Products, Carts, Orders, Payments, Webhook Events |
-| **Access Pattern** | Low-frequency writes, high-integrity reads | High-frequency catalog reads, complex nested writes |
-| **Schema Strictness** | Rigid relational schema with column definitions | Dynamic document schemas with Mongoose type validation |
-| **Transaction Scope** | ACID row-level locking | Multi-document ACID transactions via replica sets |
-| **Rationale** | Identity demands absolute uniqueness, stable foreign keys, and relational integrity. | Order items represent point-in-time snapshots of dynamic product attributes that should never change retroactively. |
+| `users` | `User` | Identity, bcrypt credentials, role (`user` / `admin`), phone |
+| `products` | `Product` | Catalog items with stock, price (minor units), images, active flag |
+| `carts` | `Cart` | Per-user transient line-item basket |
+| `orders` | `Order` | Immutable order snapshots with ACID guarantees via sessions |
+| `payments` | `Payment` | Stripe payment transaction ledger |
+| `processedevents` | `ProcessedEvent` | Webhook idempotency deduplication store |
+| `wishlists` | `Wishlist` | Per-user bookmarked product list |
 
 ---
 
-### 6.2 Cross-Database Identity Mapping
+### 6.2 Intra-Collection Identity Mapping
 
-Nexora links the two independent database engines via the **Numeric User ID** abstraction:
+All collections reference users via MongoDB's native `ObjectId`. There is no cross-database join — all relationships are resolved through Mongoose `populate()` or explicit `userId` field lookups:
 
 ```mermaid
 graph LR
-    subgraph MySQLStore ["MySQL Database (e_commerce)"]
-        UsersTable["TABLE users<br/>───────────────────────<br/>🔑 id INT (AUTO_INCREMENT)<br/>📧 email VARCHAR(255)<br/>🔒 password VARCHAR(255)<br/>👑 role ENUM('user','admin')"]
-    end
-
     subgraph MongoStore ["MongoDB Database (e_commerce)"]
-        CartsCollection["COLLECTION carts<br/>───────────────────────<br/>🔑 _id: ObjectId<br/>🔗 userId: Number (= users.id)<br/>📦 items: [ { productId, quantity } ]"]
+        UsersCollection["COLLECTION users<br/>───────────────────────<br/>🔑 _id: ObjectId<br/>📧 email: String (unique)<br/>🔒 password: String (select: false)<br/>👑 role: 'user' | 'admin'"]
 
-        OrdersCollection["COLLECTION orders<br/>───────────────────────<br/>🔑 _id: ObjectId<br/>🔗 userId: Number (= users.id)<br/>🏷️ checkoutAttemptId: String<br/>📦 items: [ { productId, name, price, qty } ]"]
+        CartsCollection["COLLECTION carts<br/>───────────────────────<br/>🔑 _id: ObjectId<br/>🔗 userId: ObjectId → users._id<br/>📦 items: [ { productId, quantity } ]"]
 
-        WishlistCollection["COLLECTION wishlists<br/>───────────────────────<br/>🔑 _id: ObjectId<br/>🔗 userId: Number (= users.id)<br/>❤️ items: [ { productId } ]"]
+        OrdersCollection["COLLECTION orders<br/>───────────────────────<br/>🔑 _id: ObjectId<br/>🔗 userId: ObjectId → users._id<br/>🏷️ checkoutAttemptId: String<br/>📦 items: [ { productId, name, price, qty } ]"]
+
+        WishlistCollection["COLLECTION wishlists<br/>───────────────────────<br/>🔑 _id: ObjectId<br/>🔗 userId: ObjectId → users._id<br/>❤️ items: [ { productId } ]"]
     end
 
-    UsersTable -.->|"Numeric Foreign Key (Logical)"| CartsCollection
-    UsersTable -.->|"Numeric Foreign Key (Logical)"| OrdersCollection
-    UsersTable -.->|"Numeric Foreign Key (Logical)"| WishlistCollection
+    UsersCollection -.->|"ObjectId Reference"| CartsCollection
+    UsersCollection -.->|"ObjectId Reference"| OrdersCollection
+    UsersCollection -.->|"ObjectId Reference"| WishlistCollection
 ```
 
 ---
@@ -490,9 +489,9 @@ flowchart TD
 
 | Pattern | Implementation in Nexora | Purpose & Architectural Benefit |
 | :--- | :--- | :--- |
-| **Polyglot Persistence** | MySQL for Auth + MongoDB for Catalog/Orders | Leverages the optimal storage engine for each bounded context. |
+| **Unified Document Store** | MongoDB for all domains (Users, Catalog, Orders, Payments) | Single operational database eliminating cross-engine distributed transactions. |
 | **Service Layer Pattern** | `order.service.js` | Decouples complex multi-step checkout logic from HTTP controllers. |
-| **Data Access Object (DAO)** | `User` object in `user.model.js` | Encapsulates parameterized SQL queries away from business logic. |
+| **Mongoose Schema Layer** | All models under `models/mongo/` | Enforces typed document schemas, indexes, and validation via Mongoose ODM. |
 | **Idempotent Consumer** | `ProcessedEvent` model in webhook pipeline | Guarantees at-most-once processing of asynchronous webhook notifications. |
 | **Client Idempotency Key** | `checkoutAttemptId` (UUID) | Prevents duplicate order placement during network timeouts or browser retries. |
 | **Compensating Transaction** | Stock restoration in `cancelOrder` | Reverses inventory reservation upon terminal order failure or customer cancellation. |
