@@ -19,6 +19,7 @@ import AdminOrders from "../pages/admin/AdminOrders";
 import AdminProducts from "../pages/admin/AdminProducts";
 import AddProduct from "../pages/admin/AddProduct";
 import EditProduct from "../pages/admin/EditProduct";
+import AdminDashboard from "../pages/admin/AdminDashboard";
 
 function AppRoutesContent() {
   const location = useLocation();
@@ -111,9 +112,18 @@ function AppRoutesContent() {
         />
 
         <Route
+          path="/admin"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/admin/orders"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute adminOnly={true}>
               <AdminOrders />
             </ProtectedRoute>
           }
@@ -122,7 +132,7 @@ function AppRoutesContent() {
         <Route
           path="/admin/products"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute adminOnly={true}>
               <AdminProducts />
             </ProtectedRoute>
           }
@@ -131,7 +141,7 @@ function AppRoutesContent() {
         <Route
           path="/admin/products/add"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute adminOnly={true}>
               <AddProduct />
             </ProtectedRoute>
           }
@@ -140,7 +150,7 @@ function AppRoutesContent() {
         <Route
           path="/admin/products/edit/:productId"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute adminOnly={true}>
               <EditProduct />
             </ProtectedRoute>
           }

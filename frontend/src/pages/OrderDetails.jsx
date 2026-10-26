@@ -8,7 +8,7 @@ function formatPrice(amount = 0) {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 2,
-  }).format(amount / 100);
+  }).format(amount);
 }
 
 function formatDate(date) {

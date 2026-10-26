@@ -9,7 +9,7 @@ function formatPrice(amount) {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 2,
-  }).format(amount / 100);
+  }).format(amount);
 }
 
 function OrderHistory() {

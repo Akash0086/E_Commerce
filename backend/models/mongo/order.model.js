@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 export const orderSchema = new mongoose.Schema(
   {
     userId: {
-      type: Number,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
       index: true,
     },
@@ -34,7 +35,8 @@ export const orderSchema = new mongoose.Schema(
           min: [0, "Price cannot be negative"],
           validate: {
             validator: Number.isInteger,
-            message: "Price must be an integer representing minor units (e.g. cents/paise)",
+            message:
+              "Price must be an integer representing minor units (e.g. cents/paise)",
           },
         },
         image: {
@@ -50,7 +52,8 @@ export const orderSchema = new mongoose.Schema(
       min: [0, "Total amount cannot be negative"],
       validate: {
         validator: Number.isInteger,
-        message: "Total amount must be an integer in minor units (e.g. cents/paise)",
+        message:
+          "Total amount must be an integer in minor units (e.g. cents/paise)",
       },
     },
 
@@ -117,7 +120,7 @@ export const orderSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 /**
@@ -134,7 +137,7 @@ orderSchema.index(
     partialFilterExpression: {
       paymentIntentId: { $type: "string" },
     },
-  }
+  },
 );
 
 export const Order = mongoose.model("Order", orderSchema);

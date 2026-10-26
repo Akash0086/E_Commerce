@@ -41,9 +41,34 @@ function Navbar() {
       </Link>
 
       <div className="navbar-links">
-        <Link to="/products">Products</Link>
-        <Link to="/orders">Returns & Orders</Link>
-        <Link to="/cart">Cart</Link>
+        {user?.role === "admin" ? (
+          <>
+            <Link to="/admin" onClick={closeMenu}>
+              Admin
+            </Link>
+            <Link to="/admin/products" onClick={closeMenu}>
+              Products
+            </Link>
+
+            <Link to="/admin/orders" onClick={closeMenu}>
+              Manage Orders
+            </Link>
+          </>
+        ) : (
+          <>
+            <Link to="/products" onClick={closeMenu}>
+              Products
+            </Link>
+
+            <Link to="/orders" onClick={closeMenu}>
+              Returns & Orders
+            </Link>
+
+            <Link to="/cart" onClick={closeMenu}>
+              Cart
+            </Link>
+          </>
+        )}
       </div>
 
       {user ? (
@@ -60,17 +85,31 @@ function Navbar() {
 
           {showMenu && (
             <div className="navbar-menu">
-              <Link to="/profile" onClick={closeMenu}>
-                Account Details
-              </Link>
+              {user.role === "admin" ? (
+                <>
+                  <Link to="/admin/products" onClick={closeMenu}>
+                    Manage Products
+                  </Link>
 
-              <Link to="/orders" onClick={closeMenu}>
-                My Orders
-              </Link>
+                  <Link to="/admin/orders" onClick={closeMenu}>
+                    Manage Orders
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/profile" onClick={closeMenu}>
+                    Account Details
+                  </Link>
 
-              <Link to="/wishlist" onClick={closeMenu}>
-                Wishlist
-              </Link>
+                  <Link to="/orders" onClick={closeMenu}>
+                    My Orders
+                  </Link>
+
+                  <Link to="/wishlist" onClick={closeMenu}>
+                    Wishlist
+                  </Link>
+                </>
+              )}
 
               <button
                 type="button"

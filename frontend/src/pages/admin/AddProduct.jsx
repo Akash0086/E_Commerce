@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
+import "../../styles/Admin/AddProduct.css";
 
 function AddProduct() {
   const [success, setSuccess] = useState("");
@@ -35,6 +36,7 @@ function AddProduct() {
       ...formData,
       images: formData.images.split(",").map((image) => image.trim()),
     };
+
     try {
       const res = await api.post("/product", productData);
       setSuccess("Product added successfully");
@@ -54,93 +56,116 @@ function AddProduct() {
   };
 
   return (
-    <div>
-      {success && <p>{success}</p>}
-      {error && <p>{error}</p>}
-      
-      <h2>Add Product</h2>
-      {success && <p>{success}</p>}
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="name">Product Name : </label>
-          <input
-            id="name"
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            placeholder="Enter product name"
-          />
-        </div>
-        <div>
-          <label htmlFor="price">Price : </label>
-          <input
-            id="price"
-            type="number"
-            name="price"
-            value={formData.price}
-            onChange={handleChange}
-            placeholder="Enter price"
-          />
-        </div>
-        <div>
-          <label htmlFor="description">Description : </label>
-          <textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            placeholder="Enter product description"
-          />
-        </div>
-        <div>
-          <label htmlFor="stock">Stock : </label>
-          <input
-            id="stock"
-            type="number"
-            name="stock"
-            value={formData.stock}
-            onChange={handleChange}
-          />
-        </div>
-        <div>
-          <label htmlFor="category">Category : </label>
-          <input
-            id="category"
-            type="text"
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-          />
+    <div className="admin-card-container">
+      <div className="admin-card-header">
+        <h2>Add Product</h2>
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => navigate("/admin/products")}
+        >
+          Back to Products
+        </button>
+      </div>
+
+      {success && <div className="alert-message success">{success}</div>}
+      {error && <div className="alert-message error">{error}</div>}
+
+      <form className="add-product-form" onSubmit={handleSubmit}>
+        <div className="form-grid">
+          <div className="form-group full-width">
+            <label htmlFor="name">Product Name</label>
+            <input
+              id="name"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Enter product name"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="price">Price ($)</label>
+            <input
+              id="price"
+              type="number"
+              name="price"
+              value={formData.price}
+              onChange={handleChange}
+              placeholder="Enter price"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="stock">Stock Quantity</label>
+            <input
+              id="stock"
+              type="number"
+              name="stock"
+              value={formData.stock}
+              onChange={handleChange}
+              placeholder="Enter stock"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="category">Category</label>
+            <input
+              id="category"
+              type="text"
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              placeholder="Enter category"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="brand">Brand</label>
+            <input
+              id="brand"
+              type="text"
+              name="brand"
+              value={formData.brand}
+              onChange={handleChange}
+              placeholder="Enter brand"
+            />
+          </div>
+
+          <div className="form-group full-width">
+            <label htmlFor="images">Images (Comma separated URLs/filenames)</label>
+            <input
+              id="images"
+              type="text"
+              name="images"
+              value={formData.images}
+              onChange={handleChange}
+              placeholder="image1.jpg, image2.jpg"
+            />
+          </div>
+
+          <div className="form-group full-width">
+            <label htmlFor="description">Description</label>
+            <textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              placeholder="Enter product description"
+            />
+          </div>
         </div>
 
-        <div>
-          <label htmlFor="brand">Brand : </label>
-          <input
-            id="brand"
-            type="text"
-            name="brand"
-            value={formData.brand}
-            onChange={handleChange}
-          />
+        <div className="form-actions">
+          <button type="submit" className="btn-primary">
+            Add Product
+          </button>
         </div>
-        <div>
-          <label htmlFor="images">Image : </label>
-          <input
-            id="images"
-            type="text"
-            name="images"
-            value={formData.images}
-            onChange={handleChange}
-            placeholder="Image filename"
-          />
-        </div>
-        <button type="submit">Add Product</button>
       </form>
-
-      <button type="button" onClick={() => navigate("/admin/products")}>
-        Back to Products
-      </button>
     </div>
   );
 }
