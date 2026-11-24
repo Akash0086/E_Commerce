@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { getProductImage } from "../../utils/imageHelper";
 import "../../styles/RecentlyAddedProducts.css";
 
 function RecentlyAddedProducts({ products = [], loading, error }) {
@@ -46,7 +47,7 @@ FRESH FINDS </span> <h2>Recently Added</h2> <p>Discover the latest additions to 
               </span>
 
               <img
-                src={`/images/${product.images?.[0]}`}
+                src={getProductImage(product.images?.[0])}
                 alt={product.name}
                 className="recent-product-image"
                 loading="lazy"

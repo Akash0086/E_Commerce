@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { getProductImage } from "../../utils/imageHelper";
 import "../../styles/PopularProducts.css";
 
 function PopularProducts({ products }) {
@@ -24,7 +25,7 @@ function PopularProducts({ products }) {
             >
               <div className="popular-product-image-wrapper">
                 <img
-                  src={`/images/${product.images?.[0]}`}
+                  src={getProductImage(product.images?.[0])}
                   alt={product.name}
                   className="popular-product-image"
                   loading="lazy"

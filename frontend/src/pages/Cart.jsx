@@ -1,6 +1,7 @@
 
 import { useCart } from "../context/CartContext";
 import { Link, useNavigate } from "react-router-dom";
+import { getProductImage } from "../utils/imageHelper";
 import "../styles/Cart.css";
 
 function Cart() {
@@ -121,7 +122,7 @@ function Cart() {
                       <div className="cart-item-image">
                         {product?.images?.[0] ? (
                           <img
-                            src={`/images/${product.images[0]}`}
+                            src={getProductImage(product.images[0])}
                             alt={product.name}
                           />
                         ) : (

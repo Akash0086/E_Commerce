@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api.js";
+import { getProductImage } from "../utils/imageHelper";
 
 function formatDate(date) {
   if (!date) return "Date unavailable";
@@ -117,7 +118,7 @@ function OrderCard({ order, formatPrice, onOrderUpdated }) {
               <div className="order-card-product-image">
                 {item.image ? (
                   <img
-                    src={`/images/${item.image?.replace(/^\/?images\//, "")}`}
+                    src={getProductImage(item.image)}
                     alt={item.name}
                   />
                 ) : (

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { getProductImage } from "../../utils/imageHelper";
 import "../../styles/FeaturedProducts.css";
 
 function FeaturedProducts({ products }) {
@@ -24,7 +25,7 @@ function FeaturedProducts({ products }) {
             >
               <div className="featured-product-image-wrapper">
                 <img
-                  src={`/images/${product.images?.[0]}`}
+                  src={getProductImage(product.images?.[0])}
                   alt={product.name}
                   className="featured-product-image"
                   loading="lazy"

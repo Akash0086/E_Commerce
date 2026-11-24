@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import api from "../services/api";
 import { useCart } from "../context/CartContext";
+import { getProductImage } from "../utils/imageHelper";
 import "../styles/ProductDetails.css";
 
 function ProductDetails() {
@@ -112,7 +113,7 @@ function ProductDetails() {
             <div className="product-main-image">
               {currentImage ? (
                 <img
-                  src={`/images/${currentImage}`}
+                  src={getProductImage(currentImage)}
                   alt={productDetail.name}
                 />
               ) : (
@@ -164,7 +165,7 @@ function ProductDetails() {
                     aria-pressed={selectedImage === index}
                   >
                     <img
-                      src={`/images/${image}`}
+                      src={getProductImage(image)}
                       alt={`${productDetail.name} ${index + 1}`}
                     />
                   </button>

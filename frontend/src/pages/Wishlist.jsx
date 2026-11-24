@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api.js";
 import { useCart } from "../context/CartContext";
+import { getProductImage } from "../utils/imageHelper";
 import "../styles/Wishlist.css";
 
 function formatPrice(price) {
@@ -240,7 +241,7 @@ function Wishlist() {
                       >
                         <img
                           className="wishlist-product-image"
-                          src={`/images/${imageName}`}
+                          src={getProductImage(image)}
                           alt={product.name}
                           loading="lazy"
                           onError={(e) => {

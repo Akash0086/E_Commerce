@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { getProductImage } from "../utils/imageHelper";
 import "../styles/ProductCard.css";
 
 function ProductCard({ product }) {
@@ -10,7 +11,7 @@ aria-label={`View ${product.name}`}
 > <div className="product-card-image-wrapper">
 {product.images?.[0] ? (
 <img
-src={`/images/${product.images[0]}`}
+src={getProductImage(product.images[0])}
 alt={product.name}
 className="product-card-image"
 loading="lazy"
