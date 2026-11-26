@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { mongodb } from "./config/mongo.js";
-import { sqldb } from "./config/mysql.js";
 import userRoute from "./routes/user.routes.js";
 import loginRoute from "./routes/login.routes.js";
 import logoutRoute from "./routes/logout.routes.js";
@@ -59,7 +58,6 @@ const PORT = process.env.PORT || 3000;
 
 const serverStart = async () => {
   await mongodb();
-  await sqldb();
 
   app.listen(PORT, () => {
     console.log(`🚀 Server running at http://localhost:${PORT}`);
