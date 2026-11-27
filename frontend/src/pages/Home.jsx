@@ -55,11 +55,30 @@ function Home() {
   }, []);
 
   if (loading) {
-    return <p className="home-status">Loading homepage...</p>;
+    return (
+      <div className="home-status" role="status">
+        <span className="home-spinner" />
+        <p>Loading homepage...</p>
+        <p className="home-status-notice">
+          Waking up the server, this can take up to a minute on the first visit
+        </p>
+      </div>
+    );
   }
 
   if (error) {
-    return <p className="home-status home-status-error">{error}</p>;
+    return (
+      <div className="home-status home-status-error" role="alert">
+        <p>{error}</p>
+        <button
+          type="button"
+          className="home-retry-button"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (

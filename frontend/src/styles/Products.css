@@ -283,6 +283,13 @@ font-size: 14px;
 line-height: 1.7;
 }
 
+.products-wakeup-notice {
+margin: -8px 0 16px !important;
+color: #64748b;
+font-size: 13px !important;
+font-weight: 500;
+}
+
 .products-state-error {
 background: #fff7f7;
 border-color: #fecaca;

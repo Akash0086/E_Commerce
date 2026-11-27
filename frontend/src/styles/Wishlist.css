@@ -367,6 +367,17 @@
   line-height: 1.6;
 }
 
+.wishlist-action-success {
+  margin: 0 0 20px;
+  padding: 13px 16px;
+  border: 1px solid #bbf7d0;
+  border-radius: 9px;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 @keyframes wishlist-spin {
   to {
     transform: rotate(360deg);

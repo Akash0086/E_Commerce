@@ -197,6 +197,9 @@ function Products() {
           <span className="products-spinner" />
           <h2>Loading products</h2>
           <p>Finding products for you...</p>
+          <p className="products-wakeup-notice">
+            Waking up the server, this can take up to a minute on the first visit
+          </p>
         </div>
       ) : error ? (
         <div className="products-state products-state-error" role="alert">

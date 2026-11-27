@@ -31,13 +31,22 @@ export function CartProvider({ children }) {
   const addToCart = useCallback(async (product, quantity) => {
     setActionError(null);
     try {
-      await api.post("/cart", {
+      const res = await api.post("/cart", {
         productId: product._id,
         quantity: quantity,
       });
       await fetchCart();
+      return {
+        success: true,
+        message: res.data?.message || "Product added to the cart.",
+      };
     } catch (err) {
-      setActionError("Failed to add item to cart.");
+      const message =
+        err.response?.status === 401
+          ? "Please log in to add items to your cart."
+          : err.response?.data?.message || "Failed to add item to cart.";
+      setActionError(message);
+      return { success: false, error: message };
     }
   }, [fetchCart]);
 

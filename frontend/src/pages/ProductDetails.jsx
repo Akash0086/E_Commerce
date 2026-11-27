@@ -16,6 +16,9 @@ function ProductDetails() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [cartMessage, setCartMessage] = useState("");
+  const [cartError, setCartError] = useState(false);
+  const [cartLoading, setCartLoading] = useState(false);
   const [wishlistMessage, setWishlistMessage] = useState("");
   const [wishlistError, setWishlistError] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
@@ -43,6 +46,34 @@ function ProductDetails() {
     fetchProduct();
   }, [id]);
 
+  const handleAddToCart = async () => {
+    if (!productDetail || outOfStock || cartLoading) return;
+
+    setCartLoading(true);
+    setCartMessage("");
+    setCartError(false);
+
+    try {
+      const result = await addToCart(productDetail, quantity);
+      if (result && !result.success) {
+        setCartError(true);
+        setCartMessage(result.error || "Failed to add product to cart.");
+      } else {
+        setCartError(false);
+        setCartMessage("Product added to the cart.");
+      }
+    } catch (err) {
+      setCartError(true);
+      setCartMessage(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to add product to cart."
+      );
+    } finally {
+      setCartLoading(false);
+    }
+  };
+
   const handleAddToWishlist = async () => {
     setWishlistLoading(true);
     setWishlistMessage("");
@@ -67,6 +98,9 @@ function ProductDetails() {
         <div className="product-details-state">
           <span className="product-details-spinner" />
           <p>Loading product details...</p>
+          <p className="product-details-wakeup-notice">
+            Waking up the server, this can take up to a minute on the first visit
+          </p>
         </div>
       </main>
     );
@@ -244,10 +278,14 @@ function ProductDetails() {
               <button
                 type="button"
                 className="add-to-cart-button"
-                onClick={() => addToCart(productDetail, quantity)}
-                disabled={outOfStock}
+                onClick={handleAddToCart}
+                disabled={outOfStock || cartLoading}
               >
-                {outOfStock ? "Out of Stock" : "Add to Cart"}
+                {outOfStock
+                  ? "Out of Stock"
+                  : cartLoading
+                  ? "Adding..."
+                  : "Add to Cart"}
               </button>
 
               <button
@@ -259,6 +297,22 @@ function ProductDetails() {
                 {wishlistLoading ? "Adding..." : "♡ Add to Wishlist"}
               </button>
             </div>
+
+            {cartMessage && (
+              <div
+                className={`cart-feedback ${
+                  cartError ? "cart-feedback-error" : ""
+                }`}
+                role="status"
+              >
+                <span>{cartMessage}</span>
+                {!cartError && (
+                  <Link to="/cart" className="cart-feedback-link">
+                    View Cart →
+                  </Link>
+                )}
+              </div>
+            )}
 
             {wishlistMessage && (
               <p

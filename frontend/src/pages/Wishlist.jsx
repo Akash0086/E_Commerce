@@ -18,6 +18,7 @@ function Wishlist() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
+  const [actionSuccess, setActionSuccess] = useState("");
   const [removingId, setRemovingId] = useState(null);
   const [addingId, setAddingId] = useState(null);
 
@@ -81,9 +82,15 @@ function Wishlist() {
 
     try {
       setActionError("");
+      setActionSuccess("");
       setAddingId(product._id);
 
-      await addToCart(product, 1);
+      const res = await addToCart(product, 1);
+      if (res && !res.success) {
+        setActionError(res.error || "Unable to add this item to your cart.");
+      } else {
+        setActionSuccess(`"${product.name}" added to the cart.`);
+      }
     } catch (err) {
       console.error("Failed to add product to cart:", err);
 
@@ -132,6 +139,12 @@ function Wishlist() {
         {actionError && (
           <p className="wishlist-action-error" role="alert">
             {actionError}
+          </p>
+        )}
+
+        {actionSuccess && (
+          <p className="wishlist-action-success" role="status">
+            {actionSuccess}
           </p>
         )}
 
