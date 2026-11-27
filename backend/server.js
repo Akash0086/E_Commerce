@@ -16,9 +16,13 @@ import { webhook } from "./controllers/payment.controller.js";
 
 const app = express();
 
+const allowedOrigins = [
+  process.env.CLIENT_URL,      // your Vercel URL, set on Render
+  "http://localhost:5173",     // local development
+];
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: allowedOrigins,
     credentials: true,
   }),
 );
