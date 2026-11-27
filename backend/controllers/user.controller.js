@@ -1,12 +1,16 @@
 import bcrypt from "bcrypt";
 import { User } from "../models/mongo/user.model.js";
 import jwt from "jsonwebtoken";
-//import dotenv from 'dotenv';
 
-//dotenv.config();
+const isProd = process.env.NODE_ENV === "production";
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProd,
+  sameSite: isProd ? "none" : "lax",
+};
 
 export const registerUser = async (req, res) => {
-  console.log(req.body);
   try {
     const { name, email, password } = req.body;
 
@@ -28,7 +32,7 @@ export const registerUser = async (req, res) => {
 
     const user = await User.create({
       name,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       role: "user",
     });
@@ -87,9 +91,7 @@ export const userLogin = async (req, res) => {
     );
 
     res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -103,10 +105,10 @@ export const userLogin = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Login error:", error);
+    console.error("Login error:", err);
     return res
       .status(500)
-      .json({ message: "Server error:", error: err.message });
+      .json({ message: "Server error:"});
   }
 };
 
@@ -132,11 +134,7 @@ export const getProfile = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-    });
+    res.clearCookie("token", cookieOptions);
 
     res.status(200).json({ message: "User successfully logged Out" });
   } catch (err) {

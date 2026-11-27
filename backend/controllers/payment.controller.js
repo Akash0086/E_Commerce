@@ -11,9 +11,8 @@ import { validateShippingAddress } from "../utils/validateShippingAddress.js";
 
 const SHIPPING_COST = 5000; // INR paise
 
-/**
- * 1. INITIALIZE PAYMENT AND ORDER
- */
+// 1. INITIALIZE PAYMENT AND ORDER
+
 export const payment = async (req, res) => {
   const userId = req.user?.id;
   const { shippingAddress, checkoutAttemptId } = req.body;
@@ -150,12 +149,8 @@ export const payment = async (req, res) => {
   }
 };
 
-/**
- * 2. STRIPE WEBHOOK
- *
- * Important:
- * The route must provide the unparsed raw request body to this handler.
- */
+// 2. STRIPE WEBHOOK
+
 export const webhook = async (req, res) => {
   const signature = req.header("stripe-signature");
 

@@ -9,9 +9,8 @@ import { validateShippingAddress } from "../utils/validateShippingAddress.js";
 // Minor unit representation: 5000 paise = ₹50.00
 const SHIPPING_COST_PAISE = 5000;
 
-/**
- * 1. PLACE COD ORDER
- */
+// PLACE COD ORDER
+
 export const order = async (req, res) => {
   const userId = req.user?.id;
   const { shippingAddress, checkoutAttemptId } = req.body;
@@ -66,9 +65,8 @@ export const order = async (req, res) => {
   }
 };
 
-/**
- * 2. GET USER ORDERS
- */
+// GET USER ORDERS
+ 
 export const getOrder = async (req, res) => {
   const userId = req.user?.id;
 
@@ -86,9 +84,8 @@ export const getOrder = async (req, res) => {
   }
 };
 
-/**
- * 3. GET SINGLE ORDER (OWNERSHIP GUARDED)
- */
+// GET SINGLE ORDER (OWNERSHIP GUARDED)
+
 export const getSingleOrder = async (req, res) => {
   const { orderId } = req.params;
   const userId = req.user?.id;
@@ -117,9 +114,8 @@ export const getSingleOrder = async (req, res) => {
   }
 };
 
-/**
- * 4. ADMIN: GET ALL ORDERS
- */
+// 4. ADMIN: GET ALL ORDERS
+ 
 export const getAllOrder = async (req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
@@ -133,9 +129,8 @@ export const getAllOrder = async (req, res) => {
   }
 };
 
-/**
- * 5. ADMIN: UPDATE ORDER STATUS
- */
+// ADMIN: UPDATE ORDER STATUS
+ 
 export const updateOrderStatus = async (req, res) => {
   const { orderId } = req.params;
   const { orderStatus } = req.body;
@@ -196,10 +191,7 @@ export const updateOrderStatus = async (req, res) => {
   }
 };
 
-/**
- * 6. CANCEL ORDER (USER/ADMIN) WITH STRIPE REFUND & STOCK RESTORATION
- */
-// controllers/order.controller.js
+// CANCEL ORDER (USER/ADMIN) WITH STRIPE REFUND & STOCK RESTORATION
 
 export async function cancelOrder(req, res) {
   const { orderId } = req.params;

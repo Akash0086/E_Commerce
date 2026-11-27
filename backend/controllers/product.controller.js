@@ -23,9 +23,10 @@ export const createProduct = async (req, res) => {
       products,
     });
   } catch (err) {
+    console.error(err);
+
     return res.status(500).json({
       message: "Failed to create product",
-      error: err.message,
     });
   }
 };
@@ -100,9 +101,10 @@ export const getAllProducts = async (req, res) => {
       },
     });
   } catch (err) {
+    console.error(err);
+
     return res.status(500).json({
       message: "Failed to fetch products",
-      error: err.message,
     });
   }
 };
@@ -122,9 +124,10 @@ export const getProductById = async (req, res) => {
       product,
     });
   } catch (err) {
+    console.error(err);
+
     return res.status(500).json({
       message: "Failed to create product",
-      error: err.message,
     });
   }
 };
@@ -154,9 +157,10 @@ export const updateProduct = async (req, res) => {
       product: updatedProduct,
     });
   } catch (err) {
+    console.error(err);
+
     return res.status(500).json({
       message: "Failed to update product",
-      error: err.message,
     });
   }
 };
@@ -173,9 +177,10 @@ export const deleteProductById = async (req, res) => {
       products,
     });
   } catch (err) {
+    console.error(err);
+
     return res.status(500).json({
       message: "Failed to create product",
-      error: err.message,
     });
   }
 };
@@ -193,6 +198,8 @@ export const getCategories = async (req, res) => {
       categories: filteredCategories,
     });
   } catch (error) {
+    console.error(err);
+
     res.status(500).json({
       success: false,
       message: "Failed to fetch categories",
@@ -209,9 +216,10 @@ export const getAllAdminProducts = async (req, res) => {
       products,
     });
   } catch (err) {
+    console.error(err);
+
     return res.status(500).json({
       message: "Failed to fetch admin products",
-      error: err.message,
     });
   }
 };
@@ -233,9 +241,10 @@ export const getAdminProductById = async (req, res) => {
       product,
     });
   } catch (err) {
+    console.error(err);
+
     return res.status(500).json({
       message: "something went wrong",
-      error: err.message,
     });
   }
 };

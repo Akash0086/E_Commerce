@@ -11,12 +11,12 @@ export async function createOrderFromCart({
   paymentIntentId = null,
   session,
 }) {
-  // 1. Mandatory Session Guard
+  // Mandatory Session Guard
   if (!session) {
     throw new Error("A database transaction session is required to create an order.");
   }
 
-  // 2. Strict Input & Type Validation
+  // Strict Input & Type Validation
   if (!["COD", "Stripe"].includes(paymentMethod)) {
     throw new Error("Invalid payment method.");
   }
@@ -32,7 +32,7 @@ export async function createOrderFromCart({
     throw new Error("A valid checkoutAttemptId is required.");
   }
 
-  // 3. Application-level Idempotency Lookup
+  // Application-level Idempotency Lookup
   const existingOrder = await Order.findOne({
     userId,
     checkoutAttemptId,
@@ -47,14 +47,14 @@ export async function createOrderFromCart({
     return existingOrder;
   }
 
-  // 4. Fetch Cart
+  // Fetch Cart
   const cart = await Cart.findOne({ userId }).session(session);
 
   if (!cart || !cart.items || cart.items.length === 0) {
     throw new Error("Cart is empty or does not exist.");
   }
 
-  // 5. Validate Product IDs and Batch Fetch
+  // Validate Product IDs and Batch Fetch
   const validProductIds = [];
   for (const item of cart.items) {
     if (!item.productId) {
@@ -71,7 +71,7 @@ export async function createOrderFromCart({
 
   const productMap = new Map(products.map((p) => [p._id.toString(), p]));
 
-  // 6. Item Processing, Price Snapshotting & Conditional Stock Reservation
+  //  Item Processing, Price Snapshotting & Conditional Stock Reservation
   const orderItems = [];
   let itemsSubtotal = 0;
 
@@ -127,7 +127,7 @@ export async function createOrderFromCart({
     itemsSubtotal += itemTotal;
   }
 
-  // 7. Total Calculation
+  // Total Calculation
   if (!Number.isSafeInteger(itemsSubtotal)) {
     throw new Error("Order subtotal exceeds the supported monetary range.");
   }
@@ -138,7 +138,7 @@ export async function createOrderFromCart({
     throw new Error("Order total exceeds the supported monetary range.");
   }
 
-  // 8. Create Order Document
+  // Create Order Document
   const [order] = await Order.create(
     [
       {
@@ -158,7 +158,7 @@ export async function createOrderFromCart({
     { session }
   );
 
-  // 9. Atomic Cart Cleanup
+  // Atomic Cart Cleanup
   const orderedProductIds = orderItems.map((item) => item.productId);
   await Cart.updateOne(
     { userId },

@@ -15,6 +15,7 @@ import wishlistRoutes from "./routes/wishlist.routes.js";
 import { webhook } from "./controllers/payment.controller.js";
 
 const app = express();
+app.set("trust proxy", 1);
 
 const allowedOrigins = [
   process.env.CLIENT_URL,      // your Vercel URL, set on Render
